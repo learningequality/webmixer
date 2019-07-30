@@ -17,6 +17,8 @@ from webmixer.exceptions import BrokenSourceException, UnscrapableSourceExceptio
 from webmixer.scrapers.base import BasicScraper
 
 """
+    IMPORTANT: You will need credentials to be able to use this scraper
+
     ORIGINAL CODE CAN BE FOUND HERE:
     https://github.com/learningequality/sushi-chef-better-world-ed
 """

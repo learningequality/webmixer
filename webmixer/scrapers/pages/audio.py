@@ -42,7 +42,7 @@ class IVooxScraper(AudioScraper):
     def test(self, url):
         return 'ivoox.com' in url
 
-    def _download_file(self, write_to_path):
+    def download_file(self, write_to_path):
         audio_id = re.search(r'(?:player_ek_)([^_]+)(?:_2_1\.html)', self.url).group(1)
         with open(write_to_path, 'wb') as fobj:
             fobj.write(downloader.read('http://www.ivoox.com/listenembeded_mn_{}_1.m4a?source=EMBEDEDHTML5'.format(audio_id)))

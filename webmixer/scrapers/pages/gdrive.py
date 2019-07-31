@@ -82,7 +82,7 @@ class GoogleDriveScraper(BasicPageScraper):
         file_metadata = file_request.execute()
         return os.path.splitext(file_metadata.get('name') or '.pdf')[1]
 
-    def _download_file(self, write_to_path):
+    def download_file(self, write_to_path):
         try:
             service = self.get_service()
 
@@ -103,7 +103,7 @@ class GoogleDriveScraper(BasicPageScraper):
         try:
             tempdir = tempfile.mkdtemp()
             gdrive_path = os.path.join(tempdir, filename or self.get_filename(self.url, default_ext=self.get_extension()))
-            self._download_file(gdrive_path)
+            self.download_file(gdrive_path)
             return self.write_file(gdrive_path)
         finally:
             shutil.rmtree(tempdir)

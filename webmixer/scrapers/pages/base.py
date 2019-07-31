@@ -52,7 +52,7 @@ class BasicPageScraper(BasicScraper):
 
 
     ##### Output methods #####
-    def _download_file(self, write_to_path):
+    def download_file(self, write_to_path):
         """
             Downloads file to write_to_path
             Args:
@@ -76,7 +76,7 @@ class BasicPageScraper(BasicScraper):
         write_to_path = os.path.join(directory, filename or self.get_filename(self.url))
 
         if overwrite or not os.path.exists(write_to_path):
-            self._download_file(write_to_path)
+            self.download_file(write_to_path)
 
         return write_to_path
 
@@ -160,7 +160,7 @@ class HTMLPageScraper(BasicPageScraper):
         return contents.prettify(formatter="minimal").encode('utf-8-sig', 'ignore')
 
     ##### Output methods #####
-    def _download_file(self, write_to_path):
+    def download_file(self, write_to_path):
         # Generate a .zip file
         with html_writer.HTMLWriter(write_to_path) as zipper:
             try:
@@ -310,7 +310,7 @@ class WebVideoScraper(VideoScraper):
         with open(write_to_path) as fobj:
             return fobj.read()
 
-    def _download_file(self, write_to_path):
+    def download_file(self, write_to_path):
         try:
             dl_settings = {
                 'outtmpl': write_to_path,
@@ -327,7 +327,7 @@ class WebVideoScraper(VideoScraper):
         try:
             tempdir = tempfile.mkdtemp()
             video_path = os.path.join(tempdir, filename or self.get_filename(self.url))
-            self._download_file(video_path)
+            self.download_file(video_path)
             return self.write_file(video_path)
         except FileNotFoundError as e:
             # Some video links don't work, so youtube dl only partially downloads files but doesn't error out

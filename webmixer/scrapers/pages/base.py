@@ -10,7 +10,7 @@ import tempfile
 
 from le_utils.constants import content_kinds
 
-from webmixer.exceptions import EXCEPTIONS, UnscrapableSourceException
+from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
 from webmixer.scrapers.base import BasicScraper
 from webmixer.scrapers.tags import COMMON_TAGS
 
@@ -215,7 +215,7 @@ class ImageScraper(BasicPageScraper):
             img = self.create_tag('img')
             img['src'] = self.to_zip(filename=filename)
             return img
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -236,7 +236,7 @@ class PDFScraper(BasicPageScraper):
             embed['width'] = '100%'
             embed['style'] = 'height: 500px;max-height: 100vh;'
             return embed
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -268,7 +268,7 @@ class AudioScraper(BasicPageScraper):
             source['src'] = self.to_zip(filename=filename)
             audio.append(source)
             return audio
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -293,7 +293,7 @@ class VideoScraper(BasicPageScraper):
             source['src'] = self.to_zip(filename=filename)
             video.append(source)
             return video
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 

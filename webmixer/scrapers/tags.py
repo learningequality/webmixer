@@ -8,7 +8,7 @@ from le_utils.constants import content_kinds
 from ricecooker.config import LOGGER
 from ricecooker.utils import downloader
 
-from webmixer.exceptions import EXCEPTIONS, UnscrapableSourceException
+from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
 from webmixer.scrapers.base import BasicScraper
 from webmixer.utils import guess_scraper
 
@@ -69,7 +69,7 @@ class BasicScraperTag(BasicScraper):
             zippath = self.process()
             self.mark_tag_to_skip(self.tag)
             return zippath
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.warning('Broken source found at {} ({})'.format(self.url, self.link))
             self.handle_error()
         except UnscrapableSourceException:
@@ -97,68 +97,6 @@ class BasicScraperTag(BasicScraper):
             Handle any unscrapable links (defaults to replacing with unscrapable message)
         """
         self.tag.replaceWith(self.create_copy_link_message(self.link))
-
-
-########## FILE-BASED TAGS ##########
-
-class ImageTag(BasicScraperTag):
-    default_ext = '.png'
-    directory = "img"
-    selector = ('img',)
-
-    def process(self):
-        # Skip any base64 images
-        if self.link and 'data:image' not in self.link:
-            return super(ImageTag, self).process()
-
-class MediaTag(BasicScraperTag):
-    """ Video/audio tags """
-    directory = "media"
-    attributes = {
-        'controls': 'controls',
-        'preload': 'auto'
-    }
-    def process(self):
-        if self.tag.find('source'):
-            for source in self.tag.find_all('source'):
-                self.source_class(source, self.zipper, self.url)
-        else:
-            return super(MediaTag, self).process()
-
-class SourceTag(BasicScraperTag):
-    selector = ('source',)
-
-    def handle_error(self):
-        self.tag.decompose()
-
-class AudioSourceTag(SourceTag):
-    default_ext = '.mp3'
-
-class VideoSourceTag(BasicScraperTag):
-    default_ext = '.mp4'
-
-class AudioTag(MediaTag):
-    default_ext = '.mp3'
-    source_class = AudioSourceTag
-    selector = ('audio',)
-
-class VideoTag(MediaTag):
-    default_ext = '.mp4'
-    source_class = VideoSourceTag
-    selector = ('video',)
-
-class EmbedTag(LinkedPageTag):
-    default_ext = '.pdf'
-    directory = 'files'
-    attributes = {
-        'style': 'width:100%; height:500px;max-height: 100vh'
-    }
-    selector = ('embed',)
-
-    def process(self):
-        scraper = self.get_scraper()
-        scraper.to_zip(filename=self.get_filename(self.link))
-
 
 
 ########## LINKED TAGS ##########
@@ -257,6 +195,66 @@ class IframeTag(LinkedPageTag):
                 self.tag[self.attribute] = scraper.to_zip()
 
 
+########## FILE-BASED TAGS ##########
+
+class ImageTag(BasicScraperTag):
+    default_ext = '.png'
+    directory = "img"
+    selector = ('img',)
+
+    def process(self):
+        # Skip any base64 images
+        if self.link and 'data:image' not in self.link:
+            return super(ImageTag, self).process()
+
+class MediaTag(BasicScraperTag):
+    """ Video/audio tags """
+    directory = "media"
+    attributes = {
+        'controls': 'controls',
+        'preload': 'auto'
+    }
+    def process(self):
+        if self.tag.find('source'):
+            for source in self.tag.find_all('source'):
+                self.source_class(source, self.zipper, self.url)
+        else:
+            return super(MediaTag, self).process()
+
+class SourceTag(BasicScraperTag):
+    selector = ('source',)
+
+    def handle_error(self):
+        self.tag.decompose()
+
+class AudioSourceTag(SourceTag):
+    default_ext = '.mp3'
+
+class VideoSourceTag(BasicScraperTag):
+    default_ext = '.mp4'
+
+class AudioTag(MediaTag):
+    default_ext = '.mp3'
+    source_class = AudioSourceTag
+    selector = ('audio',)
+
+class VideoTag(MediaTag):
+    default_ext = '.mp4'
+    source_class = VideoSourceTag
+    selector = ('video',)
+
+class EmbedTag(LinkedPageTag):
+    default_ext = '.pdf'
+    directory = 'files'
+    attributes = {
+        'style': 'width:100%; height:500px;max-height: 100vh'
+    }
+    selector = ('embed',)
+
+    def process(self):
+        scraper = self.get_scraper()
+        scraper.to_zip(filename=self.get_filename(self.link))
+
 
 ########## OTHER TAGS ##########
 
@@ -278,7 +276,7 @@ class StyleTag(BasicScraperTag):
             if not css_url.startswith('data:image') and not css_url.startswith('data:application'):
                 try:
                     style_sheet = style_sheet.replace(css_url, os.path.basename(self.write_url(css_url, url=self.link, default_ext='.png')))
-                except EXCEPTIONS as e:
+                except BROKEN_EXCEPTIONS as e:
                     LOGGER.warn('Unable to download stylesheet url at {} ({})'.format(self.url, str(e)))
 
         self.tag[self.attribute] = self.format_url(self.write_contents(self.get_filename(self.link), style_sheet))

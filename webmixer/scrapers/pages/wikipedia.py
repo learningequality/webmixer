@@ -4,7 +4,7 @@
 from bs4 import BeautifulSoup
 from ricecooker.config import LOGGER
 
-from webmixer.exceptions import EXCEPTIONS
+from webmixer.exceptions import BROKEN_EXCEPTIONS
 from webmixer.scrapers.pages.base import HTMLPageScraper
 from webmixer.scrapers.tags import VideoTag
 
@@ -21,7 +21,7 @@ class WikipediaVideoTag(VideoTag):
             for source in video.find_all('source'):
                 try:
                     source['src'] = self.write_url(source['src'], directory='media')
-                except EXCEPTIONS as e:
+                except BROKEN_EXCEPTIONS as e:
                     LOGGER.warning(str(e))
                     source.decompose()
             self.tag.replaceWith(video.video)

@@ -14,7 +14,7 @@ requirements = [l.strip() for l in requirements_raw if l.strip() and not l.start
 setup(
     name="webmixer",
     packages = find_packages(),
-    version="0.0.0",
+    version="0.0.1",
     description="Library for scraping urls and downloading them as files",
     long_description=readme + '\n\n' + history,
     long_description_content_type="text/markdown",

@@ -6,7 +6,12 @@ import re
 import youtube_dl
 from bs4 import BeautifulSoup
 from ricecooker.utils import downloader
+
 from pages import HTMLPageScraper
+from pages import ImageScraper
+from pages import WebVideoScraper
+
+from webmixer.utils import get_absolute_url
 
 class ThingLinkScraper(HTMLPageScraper):
     partially_scrapable = True
@@ -26,7 +31,7 @@ class ThingLinkScraper(HTMLPageScraper):
         for script in contents.find_all('script'):
             if script.get('src') and 'embed.js' in script['src']:
                 response = requests.get('https://www.thinglink.com/api/tags?url={}'.format(thinglink_id))
-                script_contents = downloader.read(self.get_relative_url(script['src'])).decode('utf-8')
+                script_contents = downloader.read(get_absolute_url(self.url, script['src'])).decode('utf-8')
                 tag_data = json.loads(response.content)
 
                 if tag_data[thinglink_id].get('image'):
@@ -105,7 +110,7 @@ class EducaplayScraper(HTMLPageScraper):
     def preprocess(self, contents):
         for script in contents.find_all('script'):
             if script.get('src') and 'xapiEventos.js' in script['src']:
-                script_contents = downloader.read(self.get_relative_url(script['src'])).decode('utf-8')
+                script_contents = downloader.read(get_absolute_url(self.url, script['src'])).decode('utf-8')
                 script_contents = script_contents.replace('img.src=rutaRecursos+imagen;', 'img.src = "img/" + imagen;');
                 script_contents = script_contents.replace('/snd_html5/', '{}/-snd_html5-'.format(self.media_directory))
                 script['src'] = self.write_contents(self.get_filename(self.url, default_ext='.js'), script_contents, directory="js")
@@ -142,11 +147,11 @@ class GeniallyScraper(HTMLPageScraper):
         response = requests.get('https://view.genial.ly/api/view/{}'.format(genial_id))
         for script in contents.find_all('script'):
             if script.get('src') and 'main' in script['src']:
-                script_contents = downloader.read(self.get_relative_url(script['src'])).decode('utf-8')
+                script_contents = downloader.read(get_absolute_url(self.url, script['src'])).decode('utf-8')
                 genial_data = json.loads(response.content)
 
                 if len(genial_data['Videos']) or len(genial_data['Audios']):
-                    LOGGER.error('Unhandled genial.ly video or audio at {}'.format(url))
+                    LOGGER.error('Unhandled genial.ly video or audio at {}'.format(self.url))
 
                 if genial_data['Genially']['ImageRender']:
                     genial_data['Genially']['ImageRender'] = self.write_url(genial_data['Genially']['ImageRender'], directory='webimg')
@@ -160,7 +165,7 @@ class GeniallyScraper(HTMLPageScraper):
                         try:
                             img['src'] = self.write_url(img['src'], directory='webimg')
                         except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError) as e:
-                            LOGGER.warning("Error processing genial.ly at {} ({})".format(url, str(e)))
+                            LOGGER.warning("Error processing genial.ly at {} ({})".format(self.url, str(e)))
                     code['HtmlCode'] = code_contents.prettify()
                 script_contents = script_contents.replace('r.a.get(c).then(function(e){return n(e.data)})', 'n({})'.format(json.dumps(genial_data)))
                 script['class'] = ['skip-scrape']

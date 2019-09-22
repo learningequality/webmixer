@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import logging
 import os
 from bs4 import BeautifulSoup
 from ricecooker.utils import downloader, html_writer
@@ -7,10 +8,14 @@ from ricecooker.config import LOGGER              # Use LOGGER to print messages
 import youtube_dl
 import shutil
 import tempfile
+import zipfile
+from urllib.parse import urlparse
 
 from le_utils.constants import content_kinds
 
 from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
+from webmixer.reporting import session_reporter
+from webmixer.utils import guess_scraper
 from webmixer.scrapers.base import BasicScraper
 from webmixer.scrapers.tags import COMMON_TAGS
 
@@ -36,7 +41,7 @@ class BasicPageScraper(BasicScraper):
                 contents (BeautifulSoup): contents of page to pre-process
         """
         # Implement in subclasses
-        pass
+        session_reporter.scraping_started(self.url)
 
     def process(self):
         return downloader.read(self.url)
@@ -48,7 +53,7 @@ class BasicPageScraper(BasicScraper):
                 contents (BeautifulSoup): contents of page to post-process
         """
         # Implement in subclasses
-        pass
+        session_reporter.scraping_finished(self.url)
 
 
     ##### Output methods #####
@@ -145,6 +150,10 @@ class HTMLPageScraper(BasicPageScraper):
         # Scrape tags
         for tag_class in (self.extra_tags + COMMON_TAGS):
             for tag in contents.find_all(*tag_class.selector):
+                LOGGER.debug("selector = {}".format(*tag_class.selector))
+                LOGGER.debug("tag = {}".format(tag))
+                if not hasattr(tag, 'attrs'):
+                    tag.attrs = []
                 scraper = tag_class(tag, self.url,
                     zipper=self.zipper,
                     scrape_subpages=self.scrape_subpages,
@@ -153,7 +162,10 @@ class HTMLPageScraper(BasicPageScraper):
                     extra_scrapers=self.scrapers,
                     color=self.color
                 )
-                scraper.scrape()
+                try:
+                    scraper.scrape()
+                except:
+                    LOGGER.warning("Error scraping tag.")
 
         self.postprocess(contents)
 
@@ -184,7 +196,7 @@ class HTMLPageScraper(BasicPageScraper):
 class DefaultScraper(HTMLPageScraper):
     """ Basic HTML page scraper in case no other scrapers match the URL """
     scrape_subpages = False
-    loadjs = True
+    loadjs = False
 
     def __init__(self, *args, **kwargs):
         super(DefaultScraper, self).__init__(*args, **kwargs)
@@ -193,7 +205,7 @@ class DefaultScraper(HTMLPageScraper):
     @classmethod
     def test(self, url):
         ext = os.path.splitext(url.split('?')[0].split('#')[0])[1].lower()
-        return not ext or ext.startswith('.htm')
+        return not ext or ext.startswith('.htm') or ext.startswith('.xhtml')
 
 
 ########## OTHER CONTENT KIND SCRAPERS ##########
@@ -244,6 +256,45 @@ class EPubScraper(BasicPageScraper):
     directory = 'docs'
     default_ext = '.epub'
     kind = content_kinds.DOCUMENT
+
+    def process(self):
+        self.preprocess('')
+        temp_epub_dir = tempfile.mkdtemp()
+        source_dir = os.path.join(temp_epub_dir, 'source')
+        edited_dir = os.path.join(temp_epub_dir, 'edited')
+        os.makedirs(source_dir, exist_ok=True)
+
+        try:
+            epub = self.url
+            if not os.path.exists(epub):
+                parts = urlparse(epub)
+                epub = os.path.join(self.dl_directory, os.path.basename(parts.path))
+                with open(epub, 'wb') as epub_file:
+                    epub_file.write(downloader.read(self.url))
+            LOGGER.debug("epub = {}".format(epub))
+            zip = zipfile.ZipFile(epub)
+            zip.extractall(source_dir)
+            zip.close()
+            shutil.copytree(source_dir, edited_dir)
+
+            for root, dirs, files in os.walk(edited_dir):
+                for afile in files:
+                    full_path = os.path.join(root, afile)
+                    scraper = guess_scraper(full_path, allow_default=True)
+                    if scraper:
+                        scraper.process()
+
+            out_path = os.path.join(self.directory, os.path.basename(epub))
+            with zipfile.ZipFile(out_path, 'w') as out_zip:
+                for root, dirs, files in os.walk(edited_dir):
+                    for file in files:
+                        full_path = os.path.join(root, file)
+                        rel_path = full_path.replace(os.path.join(edited_dir, ''), '')
+                        out_zip.write(full_path, rel_path)
+
+        finally:
+            shutil.rmtree(temp_epub_dir)
+        self.postprocess('')
 
     @classmethod
     def test(self, url):

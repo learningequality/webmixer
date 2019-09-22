@@ -9,7 +9,9 @@ from ricecooker.config import LOGGER
 from ricecooker.utils import downloader
 
 from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
+from webmixer.reporting import session_reporter
 from webmixer.scrapers.base import BasicScraper
+from webmixer.utils import get_absolute_url
 from webmixer.utils import guess_scraper
 
 cssutils.log.setLevel(logging.FATAL)  # Reduce cssutils output
@@ -33,7 +35,7 @@ class BasicScraperTag(BasicScraper):
         self.attributes = self.attributes or {}
         self.tag = tag
         self.attribute = attribute or self.default_attribute
-        self.link = self.tag.get(self.attribute) and self.get_relative_url(self.tag.get(self.attribute)).strip('%20')
+        self.link = self.tag.get(self.attribute) and get_absolute_url(self.url, self.tag.get(self.attribute)).strip('%20')
         self.scrape_subpages = scrape_subpages
         self.extra_scrapers = extra_scrapers or []
         self.color = color
@@ -55,7 +57,9 @@ class BasicScraperTag(BasicScraper):
             Scrapes the tag and handles potential exceptions
             Returns the path to the zipped file
         """
+        warning = None
         if 'skip-scrape' in (self.tag.get('class') or []):
+            session_reporter.link_processed(self.url, message="Link ignored as it was marked with skip-scrape.")
             return
         try:
             # Set attributes based on attributes dict
@@ -70,20 +74,28 @@ class BasicScraperTag(BasicScraper):
             self.mark_tag_to_skip(self.tag)
             return zippath
         except BROKEN_EXCEPTIONS as e:
-            LOGGER.warning('Broken source found at {} ({})'.format(self.url, self.link))
+            warning = 'Broken source found at {} ({})'.format(self.url, self.link)
             self.handle_error()
         except UnscrapableSourceException:
-            LOGGER.warning('Unscrapable source found at {} ({})'.format(self.url, self.link))
+            warning = 'Unscrapable source found at {} ({})'.format(self.url, self.link)
             self.handle_unscrapable()
         except KeyError as e:
-            LOGGER.warning('Key error at {} ({})'.format(self.url, str(e)))
+            warning = 'Key error at {} ({})'.format(self.url, str(e))
+
+        warnings = None
+        if warning:
+            warnings = [warning]
+        session_reporter.link_processed(self.url, message=None, warnings=warnings)
 
     def process(self):
         """
             Make the tag usable from within an html zip by downloading any referenced files
             Returns the path to the zipped file
         """
-        self.tag[self.attribute] = self.format_url(self.write_url(self.link))
+        new_url = self.format_url(self.write_url(self.link))
+        self.tag[self.attribute] = new_url
+        session_reporter.link_processed(self.link, message="Updated to: {}".format(new_url))
+
         return self.tag[self.attribute]
 
     def handle_error(self):
@@ -121,6 +133,8 @@ class LinkTag(LinkedPageTag):
         # Skip links that don't link to outside sources
         if not self.link or 'javascript:void' in self.link \
             or self.tag[self.attribute].startswith("#") or self.tag[self.attribute] == '/':
+            if self.link:
+                session_reporter.link_processed('ignored: {}'.format(self.link))
             return
 
         # Turn any email links to plain text
@@ -150,6 +164,8 @@ class LinkTag(LinkedPageTag):
         # If the link has been triaged, just set the attribute
         else:
             self.tag[self.attribute] = self.triaged[self.link]
+
+        session_reporter.link_processed('new: {}, orig: {}'.format(self.tag[self.attribute], self.link))
 
     def handle_error(self):
         # Replace link with plaintext or any child images
@@ -279,7 +295,7 @@ class StyleTag(BasicScraperTag):
                 except BROKEN_EXCEPTIONS as e:
                     LOGGER.warn('Unable to download stylesheet url at {} ({})'.format(self.url, str(e)))
 
-        self.tag[self.attribute] = self.format_url(self.write_contents(self.get_filename(self.link), style_sheet))
+        self.tag[self.attribute] = self.format_url(self.write_contents(self.get_filename(self.link), style_sheet.encode('utf-8')))
         return self.tag[self.attribute]
 
     def handle_error(self):

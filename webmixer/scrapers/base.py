@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 import os
+import shutil
+
+from webmixer.reporting import session_reporter
 from webmixer.utils import create_tag, create_copy_link_message, generate_filename, get_absolute_url
 
 class BasicScraper(object):
@@ -9,17 +12,22 @@ class BasicScraper(object):
     locale = 'en'                # Language to use when writing error messages
     default_ext = None           # Extension to default to for extracted files
 
-    def __init__(self, url, zipper=None, triaged=None, locale=None):
+    def __init__(self, url, zipper=None, triaged=None, locale=None, base_url=None):
         """
             url (str): URL to read from
             zipper (optional ricecooker.utils.html_writer): zip to write to
             triaged ([str]): list of already parsed URLs
             locale (str): locale code for content locale
+            base_url (str): If url is relative, the root the path is relative to
         """
         self.url = url
+        self.rel_url = url
+        self.base_url = base_url
         self.triaged = triaged or {}
         if locale:
             self.locale = locale
+        if self.base_url:
+            self.url = self.base_url + self.url
         self.zipper = zipper
 
     def create_tag(self, tag):
@@ -60,7 +68,10 @@ class BasicScraper(object):
             Returns filepath within zip
         """
         filename = filename or self.get_filename(link, default_ext=default_ext)
-        return self.zipper.write_url(get_absolute_url(url or self.url, link), filename, directory=directory or self.directory)
+        if self.zipper:
+            return self.zipper.write_url(get_absolute_url(url or self.url, link), filename, directory=directory or self.directory)
+        full_path = filename if not directory else os.path.join(directory, filename)
+        return full_path
 
     def write_contents(self, filename, contents, directory=None):
         """
@@ -71,7 +82,14 @@ class BasicScraper(object):
                 directory (str): directory to write to zip
             Returns filepath within zip
         """
-        return self.zipper.write_contents(filename, contents, directory=directory or self.directory)
+        if self.zipper:
+            return self.zipper.write_contents(filename, contents, directory=directory or self.directory)
+
+        full_path = filename if not directory else os.path.join(directory, filename)
+        f = open(full_path, mode="wb")
+        f.write(contents)
+        f.close()
+        return full_path
 
     def write_file(self, filepath, directory=None):
         """
@@ -81,7 +99,11 @@ class BasicScraper(object):
                 directory (str): directory to write to zip
             Returns filepath within zip
         """
-        return self.zipper.write_file(filepath, os.path.basename(filepath), directory=directory or self.directory)
+        if self.zipper:
+            return self.zipper.write_file(filepath, os.path.basename(filepath), directory=directory or self.directory)
+
+        shutil.copy(filepath, directory)
+
 
     def create_broken_link_message(self, link):
         """

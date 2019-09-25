@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from webmixer.reporting import session_reporter
+import webmixer.reporting as reporting
 from webmixer.scrapers.pages.base import EPubScraper
 from webmixer.utils import guess_scraper
 
@@ -18,4 +18,9 @@ class EPubTest(unittest.TestCase):
     def test_epub_links(self):
         scraper = guess_scraper(self.epub_file)
         scraper.process()
-        assert not session_reporter.file_links
+        assert len(reporting.session_reporter.file_links) == 5
+        for filename in reporting.session_reporter.file_links:
+            file_links = reporting.session_reporter.file_links[filename]
+            for status in file_links:
+                assert status in reporting.LINK_STATUSES
+                assert status != reporting.LINK_ERROR

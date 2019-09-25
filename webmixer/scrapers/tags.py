@@ -8,13 +8,14 @@ from le_utils.constants import content_kinds
 from ricecooker.config import LOGGER
 from ricecooker.utils import downloader
 
+import webmixer.reporting as reporting
 from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
-from webmixer.reporting import session_reporter
 from webmixer.scrapers.base import BasicScraper
 from webmixer.utils import get_absolute_url
 from webmixer.utils import guess_scraper
 
 cssutils.log.setLevel(logging.FATAL)  # Reduce cssutils output
+reporter = reporting.session_reporter
 
 
 class BasicScraperTag(BasicScraper):
@@ -58,8 +59,9 @@ class BasicScraperTag(BasicScraper):
             Returns the path to the zipped file
         """
         warning = None
+        status = None
         if 'skip-scrape' in (self.tag.get('class') or []):
-            session_reporter.link_processed(self.url, message="Link ignored as it was marked with skip-scrape.")
+            reporter.link_processed(self.link, status=reporting.LINK_IGNORED, scraper=self.__class__.__name__, message="Link ignored as it was marked with skip-scrape.")
             return
         try:
             # Set attributes based on attributes dict
@@ -71,21 +73,28 @@ class BasicScraperTag(BasicScraper):
 
             # Process the tag and return the zipped file
             zippath = self.process()
+
+            if self.link:
+                reporter.link_processed(self.link, status=reporting.LINK_PROCESSED, scraper=self.__class__.__name__)
             self.mark_tag_to_skip(self.tag)
             return zippath
         except BROKEN_EXCEPTIONS as e:
             warning = 'Broken source found at {} ({})'.format(self.url, self.link)
+            status = reporting.LINK_BROKEN
             self.handle_error()
         except UnscrapableSourceException:
             warning = 'Unscrapable source found at {} ({})'.format(self.url, self.link)
+            status = reporting.LINK_UNSUPPORTED
             self.handle_unscrapable()
         except KeyError as e:
             warning = 'Key error at {} ({})'.format(self.url, str(e))
+            status = reporting.LINK_ERROR
 
         warnings = None
         if warning:
             warnings = [warning]
-        session_reporter.link_processed(self.url, message=None, warnings=warnings)
+            assert status, "Please make sure that processing status is set."
+            reporter.link_processed(self.url, status=status, scraper=self.__class__.__name__, message=None, warnings=warnings)
 
     def process(self):
         """
@@ -94,7 +103,6 @@ class BasicScraperTag(BasicScraper):
         """
         new_url = self.format_url(self.write_url(self.link))
         self.tag[self.attribute] = new_url
-        session_reporter.link_processed(self.link, message="Updated to: {}".format(new_url))
 
         return self.tag[self.attribute]
 
@@ -134,7 +142,7 @@ class LinkTag(LinkedPageTag):
         if not self.link or 'javascript:void' in self.link \
             or self.tag[self.attribute].startswith("#") or self.tag[self.attribute] == '/':
             if self.link:
-                session_reporter.link_processed('ignored: {}'.format(self.link))
+                reporter.link_processed(self.url, status=reporting.LINK_IGNORED, scraper=self.__class__.__name__)
             return
 
         # Turn any email links to plain text
@@ -164,8 +172,6 @@ class LinkTag(LinkedPageTag):
         # If the link has been triaged, just set the attribute
         else:
             self.tag[self.attribute] = self.triaged[self.link]
-
-        session_reporter.link_processed('new: {}, orig: {}'.format(self.tag[self.attribute], self.link))
 
     def handle_error(self):
         # Replace link with plaintext or any child images

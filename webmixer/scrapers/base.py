@@ -53,7 +53,10 @@ class BasicScraper(object):
             Args:
                 tag (str): tag to mark
         """
-        tag['class'] = (tag.get('class') or []) + ['skip-scrape']
+        # Some tags, e.g. script tags with JS content, can have attrs be None
+        if not tag.attrs:
+            tag.attrs = {}
+        tag['class'] = tag.get('class') or [] + ['skip-scrape']
 
     def write_url(self, link, url=None, default_ext=None, filename=None, directory=None):
         """

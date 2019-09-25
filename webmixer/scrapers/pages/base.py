@@ -151,9 +151,8 @@ class HTMLPageScraper(BasicPageScraper):
         for tag_class in (self.extra_tags + COMMON_TAGS):
             for tag in contents.find_all(*tag_class.selector):
                 LOGGER.debug("selector = {}".format(*tag_class.selector))
-                LOGGER.debug("tag = {}".format(tag))
-                if not hasattr(tag, 'attrs'):
-                    tag.attrs = []
+                LOGGER.debug("tag = {}".format(repr(tag)))
+
                 scraper = tag_class(tag, self.url,
                     zipper=self.zipper,
                     scrape_subpages=self.scrape_subpages,
@@ -162,10 +161,7 @@ class HTMLPageScraper(BasicPageScraper):
                     extra_scrapers=self.scrapers,
                     color=self.color
                 )
-                try:
-                    scraper.scrape()
-                except:
-                    LOGGER.warning("Error scraping tag.")
+                scraper.scrape()
 
         self.postprocess(contents)
 

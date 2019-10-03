@@ -49,7 +49,7 @@ def get_absolute_url(url, endpoint=None):
             endpoint (str): link to convert to an absolute url (e.g. /image.png)
     """
     endpoint = endpoint.replace('%20', ' ').strip()
-    if endpoint.strip().startswith('http'):
+    if endpoint.startswith(('http', 'file://')):
         return endpoint
     elif endpoint.startswith('//'):
         return 'https:{}'.format(endpoint)

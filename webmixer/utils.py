@@ -41,6 +41,11 @@ def generate_filename(link, default_ext=None):
     return "{}{}".format(hash_object.hexdigest(), ext or default_ext)
 
 
+def is_absolute(url):
+    """Return whether URL has a host domain or has a scheme eg. 'file://...'"""
+    return bool(urlparse(url).netloc) or bool(urlparse(url).scheme)
+
+
 def get_absolute_url(url, endpoint=None):
     """
         Returns the absolute url based on the url and endpoint
@@ -49,10 +54,10 @@ def get_absolute_url(url, endpoint=None):
             endpoint (str): link to convert to an absolute url (e.g. /image.png)
     """
     endpoint = endpoint.replace('%20', ' ').strip()
-    if endpoint.startswith(('http', 'file://')):
-        return endpoint
-    elif endpoint.startswith('//'):
+    if endpoint.startswith('//'):
         return 'https:{}'.format(endpoint)
+    elif is_absolute(endpoint):
+        return endpoint
     elif '../' in endpoint:
         jumps = len(list(section for section in endpoint.split('/') if section == '..'))
         url_sections = url.split('/')[:-(jumps + 1)] + endpoint.split('/')[jumps:]

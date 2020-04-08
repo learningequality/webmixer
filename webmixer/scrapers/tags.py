@@ -117,6 +117,9 @@ class LinkTag(LinkedPageTag):
     }
     selector = ('a',)
 
+    def get_relative_url(self, url):
+        return url
+
     def process(self):
         # Skip links that don't link to outside sources
         if not self.link or 'javascript:void' in self.link \

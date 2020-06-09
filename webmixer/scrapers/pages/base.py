@@ -162,13 +162,8 @@ class HTMLPageScraper(BasicPageScraper):
     def download_file(self, write_to_path):
         # Generate a .zip file
         with html_writer.HTMLWriter(write_to_path) as zipper:
-            # try:
             self.zipper = zipper
             self.to_zip(filename='index.html')
-            # except Exception as e:
-            #     # Any errors here will just say index.html file does not exist, so
-            #     # print out error for more descriptive debugging
-            #     LOGGER.error(str(e))
 
     def to_file(self, filename=None, **kwargs):
         # Make sure html is being written to a zip file here

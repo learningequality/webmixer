@@ -101,56 +101,6 @@ class BasicScraperTag(BasicScraper):
         self.tag.replaceWith(self.create_copy_link_message(self.link))
 
 
-########## FILE-BASED TAGS ##########
-
-class ImageTag(BasicScraperTag):
-    default_ext = '.png'
-    directory = "img"
-    selector = ('img',)
-
-    def process(self):
-        # Skip any base64 images
-        if self.link and 'data:image' not in self.link:
-            return super(ImageTag, self).process()
-
-class MediaTag(BasicScraperTag):
-    """ Video/audio tags """
-    directory = "media"
-    attributes = {
-        'controls': 'controls',
-        'preload': 'auto'
-    }
-    def process(self):
-        if self.tag.find('source'):
-            for source in self.tag.find_all('source'):
-                self.source_class(source, self.zipper, self.url)
-        else:
-            return super(MediaTag, self).process()
-
-class SourceTag(BasicScraperTag):
-    selector = ('source',)
-
-    def handle_error(self):
-        self.tag.decompose()
-
-class AudioSourceTag(SourceTag):
-    default_ext = '.mp3'
-
-class VideoSourceTag(BasicScraperTag):
-    default_ext = '.mp4'
-
-class AudioTag(MediaTag):
-    default_ext = '.mp3'
-    source_class = AudioSourceTag
-    selector = ('audio',)
-
-class VideoTag(MediaTag):
-    default_ext = '.mp4'
-    source_class = VideoSourceTag
-    selector = ('video',)
-
-
-
 ########## LINKED TAGS ##########
 
 class LinkedPageTag(BasicScraperTag):
@@ -180,6 +130,9 @@ class LinkTag(LinkedPageTag):
         'target': ''
     }
     selector = ('a',)
+
+    def get_relative_url(self, url):
+        return url
 
     def process(self):
         # Skip links that don't link to outside sources
@@ -258,6 +211,66 @@ class IframeTag(LinkedPageTag):
             else:
                 self.tag[self.attribute] = scraper.to_zip()
 
+
+########## FILE-BASED TAGS ##########
+
+class ImageTag(BasicScraperTag):
+    default_ext = '.png'
+    directory = "img"
+    selector = ('img',)
+
+    def process(self):
+        # Skip any base64 images
+        if self.link and 'data:image' not in self.link:
+            return super(ImageTag, self).process()
+
+class MediaTag(BasicScraperTag):
+    """ Video/audio tags """
+    directory = "media"
+    attributes = {
+        'controls': 'controls',
+        'preload': 'auto'
+    }
+    def process(self):
+        if self.tag.find('source'):
+            for source in self.tag.find_all('source'):
+                self.source_class(source, self.zipper, self.url)
+        else:
+            return super(MediaTag, self).process()
+
+class SourceTag(BasicScraperTag):
+    selector = ('source',)
+
+    def handle_error(self):
+        self.tag.decompose()
+
+class AudioSourceTag(SourceTag):
+    default_ext = '.mp3'
+
+class VideoSourceTag(BasicScraperTag):
+    default_ext = '.mp4'
+
+class AudioTag(MediaTag):
+    default_ext = '.mp3'
+    source_class = AudioSourceTag
+    selector = ('audio',)
+
+class VideoTag(MediaTag):
+    default_ext = '.mp4'
+    source_class = VideoSourceTag
+    selector = ('video',)
+
+class EmbedTag(LinkedPageTag):
+    default_ext = '.pdf'
+    directory = 'files'
+    attributes = {
+        'style': 'width:100%; height:500px;max-height: 100vh'
+    }
+    selector = ('embed',)
+
+    def process(self):
+        scraper = self.get_scraper()
+        scraper.to_zip(filename=self.get_filename(self.link))
 
 
 ########## OTHER TAGS ##########

@@ -9,15 +9,18 @@ class BasicScraper(object):
     locale = 'en'                # Language to use when writing error messages
     default_ext = None           # Extension to default to for extracted files
 
+
     def __init__(self, url, zipper=None, triaged=None, locale="en"):
         """
             url (str): URL to read from
             zipper (optional ricecooker.utils.html_writer): zip to write to
             triaged ([str]): list of already parsed URLs
+            locale (str): locale code for content locale
         """
-        self.url = get_absolute_url(url)
+        self.url = url
         self.triaged = triaged or {}
-        self.locale = locale
+        if locale:
+            self.locale = locale
         self.zipper = zipper
 
     def create_tag(self, tag):

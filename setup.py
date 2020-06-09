@@ -6,24 +6,15 @@ readme = open('README.md').read()
 with open('docs/history.rst') as history_file:
     history = history_file.read()
 
-requirements = [
-    "requests>=2.11.1",
-    "beautifulsoup4>=4.6.3",
-    "ricecooker>=0.6.31",
-    "le_utils>=0.1.19",
-    "cssutils>=1.0.2",
-    "google-api-python-client>=1.7.9",
-    "google-auth-oauthlib>=0.4.0",
-    "oauthlib>=3.0.1",
-    "requests-oauthlib>=1.2.0",
-    "youtube_dl>=2019.7.2",
-]
+# Read requirements from requirements.txt
+requirements_raw = open('requirements.txt').readlines()
+requirements = [l.strip() for l in requirements_raw if l.strip() and not l.startswith('#')]
 
 
 setup(
     name="webmixer",
     packages = find_packages(),
-    version="0.0.0",
+    version="0.0.1",
     description="Library for scraping urls and downloading them as files",
     long_description=readme + '\n\n' + history,
     long_description_content_type="text/markdown",

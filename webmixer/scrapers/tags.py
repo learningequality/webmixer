@@ -8,9 +8,9 @@ from le_utils.constants import content_kinds
 from ricecooker.config import LOGGER
 from ricecooker.utils import downloader
 
-from webmixer.exceptions import EXCEPTIONS, UnscrapableSourceException
+from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
 from webmixer.scrapers.base import BasicScraper
-from webmixer.utils import guess_scraper
+from webmixer.utils import guess_scraper, get_absolute_url
 
 cssutils.log.setLevel(logging.FATAL)  # Reduce cssutils output
 
@@ -33,9 +33,10 @@ class BasicScraperTag(BasicScraper):
         self.attributes = self.attributes or {}
         self.tag = tag
         self.attribute = attribute or self.default_attribute
-        self.link = self.tag.get(self.attribute) and self.get_relative_url(self.tag.get(self.attribute)).strip('%20')
+        self.link = self.tag.get(self.attribute) and get_absolute_url(url, self.tag[self.attribute]).strip('%20')
         self.scrape_subpages = scrape_subpages
-        self.extra_scrapers = extra_scrapers or []
+        self.extra_scrapers = self.extra_scrapers or []
+        self.extra_scrapers.extend(extra_scrapers or [])
         self.color = color
 
     def format_url(self, zipper_path):
@@ -67,9 +68,10 @@ class BasicScraperTag(BasicScraper):
 
             # Process the tag and return the zipped file
             zippath = self.process()
-            self.mark_tag_to_skip(self.tag)
+            if zippath:
+                self.mark_tag_to_skip(self.tag)
             return zippath
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.warning('Broken source found at {} ({})'.format(self.url, self.link))
             self.handle_error()
         except UnscrapableSourceException:
@@ -147,18 +149,6 @@ class VideoTag(MediaTag):
     source_class = VideoSourceTag
     selector = ('video',)
 
-class EmbedTag(LinkedPageTag):
-    default_ext = '.pdf'
-    directory = 'files'
-    attributes = {
-        'style': 'width:100%; height:500px;max-height: 100vh'
-    }
-    selector = ('embed',)
-
-    def process(self):
-        scraper = self.get_scraper()
-        scraper.to_zip(filename=self.get_filename(self.link))
-
 
 
 ########## LINKED TAGS ##########
@@ -170,6 +160,18 @@ class LinkedPageTag(BasicScraperTag):
             downloader.read(self.link) # Will raise an error if this is broken
             raise UnscrapableSourceException
         return scraper
+
+class EmbedTag(LinkedPageTag):
+    default_ext = '.pdf'
+    directory = 'files'
+    attributes = {
+        'style': 'width:100%; height:500px;max-height: 100vh'
+    }
+    selector = ('embed',)
+
+    def process(self):
+        scraper = self.get_scraper()
+        scraper.to_zip(filename=self.get_filename(self.link))
 
 class LinkTag(LinkedPageTag):
     default_attribute = 'href'
@@ -278,7 +280,7 @@ class StyleTag(BasicScraperTag):
             if not css_url.startswith('data:image') and not css_url.startswith('data:application'):
                 try:
                     style_sheet = style_sheet.replace(css_url, os.path.basename(self.write_url(css_url, url=self.link, default_ext='.png')))
-                except EXCEPTIONS as e:
+                except BROKEN_EXCEPTIONS as e:
                     LOGGER.warn('Unable to download stylesheet url at {} ({})'.format(self.url, str(e)))
 
         self.tag[self.attribute] = self.format_url(self.write_contents(self.get_filename(self.link), style_sheet))

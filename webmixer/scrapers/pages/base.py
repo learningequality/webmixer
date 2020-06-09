@@ -10,7 +10,7 @@ import tempfile
 
 from le_utils.constants import content_kinds
 
-from webmixer.exceptions import EXCEPTIONS, UnscrapableSourceException
+from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
 from webmixer.scrapers.base import BasicScraper
 from webmixer.scrapers.tags import COMMON_TAGS
 
@@ -129,8 +129,6 @@ class HTMLPageScraper(BasicPageScraper):
         # Using html.parser as it is better at handling special characters
         contents = BeautifulSoup(downloader.read(self.url, loadjs=self.loadjs), 'html.parser')
 
-        self.preprocess(contents)
-
         # If a main area is specified, replace body contents with main area
         if self.main_area_selector:
             body = self.create_tag('body')
@@ -141,6 +139,8 @@ class HTMLPageScraper(BasicPageScraper):
         for item in self.omit_list:
             for element in contents.find_all(*item):
                 element.decompose()
+
+        self.preprocess(contents)
 
         # Scrape tags
         for tag_class in (self.extra_tags + COMMON_TAGS):
@@ -156,20 +156,19 @@ class HTMLPageScraper(BasicPageScraper):
                 scraper.scrape()
 
         self.postprocess(contents)
-
         return contents.prettify(formatter="minimal").encode('utf-8-sig', 'ignore')
 
     ##### Output methods #####
     def download_file(self, write_to_path):
         # Generate a .zip file
         with html_writer.HTMLWriter(write_to_path) as zipper:
-            try:
-                self.zipper = zipper
-                self.to_zip(filename='index.html')
-            except Exception as e:
-                # Any errors here will just say index.html file does not exist, so
-                # print out error for more descriptive debugging
-                LOGGER.error(str(e))
+            # try:
+            self.zipper = zipper
+            self.to_zip(filename='index.html')
+            # except Exception as e:
+            #     # Any errors here will just say index.html file does not exist, so
+            #     # print out error for more descriptive debugging
+            #     LOGGER.error(str(e))
 
     def to_file(self, filename=None, **kwargs):
         # Make sure html is being written to a zip file here
@@ -215,7 +214,7 @@ class ImageScraper(BasicPageScraper):
             img = self.create_tag('img')
             img['src'] = self.to_zip(filename=filename)
             return img
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -236,7 +235,7 @@ class PDFScraper(BasicPageScraper):
             embed['width'] = '100%'
             embed['style'] = 'height: 500px;max-height: 100vh;'
             return embed
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -268,7 +267,7 @@ class AudioScraper(BasicPageScraper):
             source['src'] = self.to_zip(filename=filename)
             audio.append(source)
             return audio
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 
@@ -293,7 +292,7 @@ class VideoScraper(BasicPageScraper):
             source['src'] = self.to_zip(filename=filename)
             video.append(source)
             return video
-        except EXCEPTIONS as e:
+        except BROKEN_EXCEPTIONS as e:
             LOGGER.error(str(e))
             return self.create_broken_link_message(self.url)
 

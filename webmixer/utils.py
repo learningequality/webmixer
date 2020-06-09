@@ -48,6 +48,8 @@ def get_absolute_url(url, endpoint=None):
             url (str): base url with domain (e.g. https://domain.com)
             endpoint (str): link to convert to an absolute url (e.g. /image.png)
     """
+    if not endpoint:
+        return url
     endpoint = endpoint.replace('%20', ' ').strip()
     if endpoint.strip().startswith('http'):
         return endpoint

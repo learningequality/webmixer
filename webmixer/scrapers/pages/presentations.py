@@ -37,6 +37,11 @@ class PresentationScraper(HTMLPageScraper):
         page.body['class'] = ['collapsed']
         page.body['onclick'] = 'closeDropdown()'
 
+        # make sure page has a text encoding
+        meta = self.create_tag('meta')
+        meta.attrs['charset'] = 'utf-8'
+        page.head.append(meta)
+
         # <style>
         style = self.create_tag('style')
         style.string = '#gallery {width: 100vw;}\n'\

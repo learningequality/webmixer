@@ -37,6 +37,11 @@ class PresentationScraper(HTMLPageScraper):
         page.body['class'] = ['collapsed']
         page.body['onclick'] = 'closeDropdown()'
 
+        # make sure page has a text encoding
+        meta = self.create_tag('meta')
+        meta.attrs['charset'] = 'utf-8'
+        page.head.append(meta)
+
         # <style>
         style = self.create_tag('style')
         style.string = '#gallery {width: 100vw;}\n'\
@@ -88,7 +93,7 @@ class PresentationScraper(HTMLPageScraper):
         # <button id="next-btn">
         nextbutton = self.create_tag('button')
         nextbutton['id'] = 'next-btn'
-        nextbutton.string = '🡒'
+        nextbutton.string = '→'
         nextbutton['style'] = 'float:right; background-color: transparent; border: none; font-size: 17pt; color: white; width:75px; font-size:16pt;'
         nextbutton['onclick'] = 'updateImage(1)'
         nextbutton['title'] = MESSAGES[self.locale]['next']
@@ -106,7 +111,7 @@ class PresentationScraper(HTMLPageScraper):
         # <button id="prev-btn">
         prevbutton = self.create_tag('button')
         prevbutton['id'] = 'prev-btn'
-        prevbutton.string = '🡐'
+        prevbutton.string = '←'
         prevbutton['style'] = 'float:left; background-color: transparent; border: none; font-size: 17pt; color: white; width:75px; font-size:16pt;'
         prevbutton['onclick'] = 'updateImage(-1)'
         prevbutton['title'] = MESSAGES[self.locale]['previous']

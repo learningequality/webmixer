@@ -1,5 +1,5 @@
 requests>=2.11.1
-beautifulsoup4>=4.6.3
+beautifulsoup4<4.9.0,>=4.6.3
 ricecooker>=0.6.31
 le_utils>=0.1.19
 cssutils>=1.0.2

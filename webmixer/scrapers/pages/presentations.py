@@ -88,7 +88,7 @@ class PresentationScraper(HTMLPageScraper):
         # <button id="next-btn">
         nextbutton = self.create_tag('button')
         nextbutton['id'] = 'next-btn'
-        nextbutton.string = '🡒'
+        nextbutton.string = '→'
         nextbutton['style'] = 'float:right; background-color: transparent; border: none; font-size: 17pt; color: white; width:75px; font-size:16pt;'
         nextbutton['onclick'] = 'updateImage(1)'
         nextbutton['title'] = MESSAGES[self.locale]['next']
@@ -106,7 +106,7 @@ class PresentationScraper(HTMLPageScraper):
         # <button id="prev-btn">
         prevbutton = self.create_tag('button')
         prevbutton['id'] = 'prev-btn'
-        prevbutton.string = '🡐'
+        prevbutton.string = '←'
         prevbutton['style'] = 'float:left; background-color: transparent; border: none; font-size: 17pt; color: white; width:75px; font-size:16pt;'
         prevbutton['onclick'] = 'updateImage(-1)'
         prevbutton['title'] = MESSAGES[self.locale]['previous']

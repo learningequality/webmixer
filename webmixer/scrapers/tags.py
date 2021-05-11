@@ -10,7 +10,7 @@ from ricecooker.utils import downloader
 
 from webmixer.exceptions import BROKEN_EXCEPTIONS, UnscrapableSourceException
 from webmixer.scrapers.base import BasicScraper
-from webmixer.utils import guess_scraper
+from webmixer.utils import guess_scraper, get_absolute_url
 
 cssutils.log.setLevel(logging.FATAL)  # Reduce cssutils output
 
@@ -33,9 +33,10 @@ class BasicScraperTag(BasicScraper):
         self.attributes = self.attributes or {}
         self.tag = tag
         self.attribute = attribute or self.default_attribute
-        self.link = self.tag.get(self.attribute) and self.get_relative_url(self.tag.get(self.attribute)).strip('%20')
+        self.link = self.tag.get(self.attribute) and get_absolute_url(url, self.tag[self.attribute]).strip('%20')
         self.scrape_subpages = scrape_subpages
-        self.extra_scrapers = extra_scrapers or []
+        self.extra_scrapers = self.extra_scrapers or []
+        self.extra_scrapers.extend(extra_scrapers or [])
         self.color = color
 
     def format_url(self, zipper_path):
@@ -67,7 +68,8 @@ class BasicScraperTag(BasicScraper):
 
             # Process the tag and return the zipped file
             zippath = self.process()
-            self.mark_tag_to_skip(self.tag)
+            if zippath:
+                self.mark_tag_to_skip(self.tag)
             return zippath
         except BROKEN_EXCEPTIONS as e:
             LOGGER.warning('Broken source found at {} ({})'.format(self.url, self.link))
@@ -108,6 +110,18 @@ class LinkedPageTag(BasicScraperTag):
             downloader.read(self.link) # Will raise an error if this is broken
             raise UnscrapableSourceException
         return scraper
+
+class EmbedTag(LinkedPageTag):
+    default_ext = '.pdf'
+    directory = 'files'
+    attributes = {
+        'style': 'width:100%; height:500px;max-height: 100vh'
+    }
+    selector = ('embed',)
+
+    def process(self):
+        scraper = self.get_scraper()
+        scraper.to_zip(filename=self.get_filename(self.link))
 
 class LinkTag(LinkedPageTag):
     default_attribute = 'href'

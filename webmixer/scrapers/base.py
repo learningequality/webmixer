@@ -9,7 +9,8 @@ class BasicScraper(object):
     locale = 'en'                # Language to use when writing error messages
     default_ext = None           # Extension to default to for extracted files
 
-    def __init__(self, url, zipper=None, triaged=None, locale=None):
+
+    def __init__(self, url, zipper=None, triaged=None, locale="en"):
         """
             url (str): URL to read from
             zipper (optional ricecooker.utils.html_writer): zip to write to

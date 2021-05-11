@@ -129,8 +129,6 @@ class HTMLPageScraper(BasicPageScraper):
         # Using html.parser as it is better at handling special characters
         contents = BeautifulSoup(downloader.read(self.url, loadjs=self.loadjs), 'html.parser')
 
-        self.preprocess(contents)
-
         # If a main area is specified, replace body contents with main area
         if self.main_area_selector:
             body = self.create_tag('body')
@@ -141,6 +139,8 @@ class HTMLPageScraper(BasicPageScraper):
         for item in self.omit_list:
             for element in contents.find_all(*item):
                 element.decompose()
+
+        self.preprocess(contents)
 
         # Scrape tags
         for tag_class in (self.extra_tags + COMMON_TAGS):
@@ -156,20 +156,14 @@ class HTMLPageScraper(BasicPageScraper):
                 scraper.scrape()
 
         self.postprocess(contents)
-
         return contents.prettify(formatter="minimal").encode('utf-8-sig', 'ignore')
 
     ##### Output methods #####
     def download_file(self, write_to_path):
         # Generate a .zip file
         with html_writer.HTMLWriter(write_to_path) as zipper:
-            try:
-                self.zipper = zipper
-                self.to_zip(filename='index.html')
-            except Exception as e:
-                # Any errors here will just say index.html file does not exist, so
-                # print out error for more descriptive debugging
-                LOGGER.error(str(e))
+            self.zipper = zipper
+            self.to_zip(filename='index.html')
 
     def to_file(self, filename=None, **kwargs):
         # Make sure html is being written to a zip file here
